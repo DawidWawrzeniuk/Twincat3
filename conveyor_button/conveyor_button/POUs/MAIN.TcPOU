@@ -1,0 +1,222 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="MAIN" Id="{a0a430e3-dbc5-442c-8e34-322bc9ec3c7a}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	HighSensor : BOOL;
+	LowSensor : BOOL;
+	PalletSensor : BOOL;
+	Loaded : BOOL;
+	AtLeftEntry : BOOL;
+	AtLeftExit : BOOL;
+	AtRightEntry : BOOL;
+	AtRightExit : BOOL;
+	Start : BOOL;
+	Reset : BOOL;
+	Stop:BOOL;
+	Counter : INT:=0;
+	EmergencyStop : BOOL;
+	Auto : BOOL;
+	Output : OutputHandler;
+	deviceName: STRING(20);
+
+	PalletSensorTrigger: F_TRIG;
+	LoadTrigger : R_TRIG;
+	NiskiLadunekTrigger : R_TRIG; 
+	WysokiLadunekTrigger : R_TRIG;
+	NiskiLadunek : BOOL:=FALSE;
+	WysokiLadunek : BOOL:=FALSE;
+	AtLeftEntryTrigger : F_TRIG;
+	AtRightEntryTrigger : F_TRIG;
+	AtLeftEntryTriggerRIS : R_TRIG;
+	AtRightEntryTriggerRIS : R_TRIG;
+	
+	AtLeftExitTrigger:F_TRIG;
+	AtRightExitTrigger:F_TRIG;
+	test: BOOL;
+	Stany : (StanPoczatkowy, NaRozdzielaczu, ZatrzymanieRozdzielacza,Rozdzial,JazdaLewo,JazdaPrawo,WyladowanieLewo,WyladowaniePrawo,StopS);
+	
+	
+	Input : INPUTS;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Input();
+F_FactoryIO_Read_Inputs();
+F_FactoryIO_Write_Coils();
+F_FactoryIO_Read_Register();
+F_FactoryIO_Write_Register();
+
+
+PalletSensorTrigger.CLK:=Input.PalletSensor;
+PalletSensorTrigger();
+LoadTrigger.CLK:=Input.Loaded;
+LoadTrigger();
+NiskiLadunekTrigger.CLK:=Input.LowSensor;
+NiskiLadunekTrigger();
+WysokiLadunekTrigger.CLK:=Input.HighSensor;
+WysokiLadunekTrigger();
+AtLeftEntryTrigger.CLK:=Input.AtLeftEntry;
+AtLeftEntryTrigger();
+AtRightEntryTrigger.CLK:=Input.AtRightEntry;
+AtRightEntryTrigger();
+AtLeftEntryTriggerRIS.CLK:=Input.AtLeftEntry;
+AtLeftEntryTrigger();
+AtRightEntryTriggerRIS.CLK:=Input.AtRightEntry;
+AtRightEntryTriggerRIS();
+AtLeftExitTrigger.CLK:=Input.AtLeftExit;
+AtLeftExitTrigger();
+AtRightExitTrigger.CLK:=Input.AtRightExit;
+AtRightExitTrigger();
+
+
+IF Input.Start = TRUE THEN
+	Stany:= StanPoczatkowy;
+	Output.Outputs('StartLight',FALSE);
+END_IF
+IF Input.Stop = FALSE THEN
+	Stany:= StopS;
+	Output.Outputs('StopLight',FALSE);
+ELSE
+	Output.Outputs('StopLight',TRUE);
+END_IF
+Output.Outputs('ConveyourLeft',TRUE);
+Output.Outputs('ConveyourRight',TRUE);
+CASE Stany OF
+	StanPoczatkowy:
+		Output.Outputs('ConveyourEntry',TRUE);
+		Output.Outputs('Load',TRUE);
+		IF NiskiLadunekTrigger.Q = TRUE THEN
+			NiskiLadunek := TRUE;
+		END_IF
+		IF WysokiLadunekTrigger.Q = TRUE THEN
+			WysokiLadunek := TRUE;
+		END_IF
+		IF PalletSensorTrigger.Q = TRUE THEN
+			Stany := NaRozdzielaczu;
+		END_IF
+	NaRozdzielaczu:
+		Output.Outputs('ConveyourEntry',FALSE);
+		IF LoadTrigger.Q = TRUE THEN
+			Stany := ZatrzymanieRozdzielacza;
+		END_IF
+	ZatrzymanieRozdzielacza:
+		Output.Outputs('Load',FALSE);
+			Stany := Rozdzial;
+	Rozdzial:
+		IF (WysokiLadunek = TRUE) AND (NiskiLadunek = TRUE) THEN
+			Stany:= JazdaLewo;
+		END_IF
+		IF (WysokiLadunek = FALSE) AND (NiskiLadunek = TRUE) THEN
+			Stany:= JazdaPrawo;
+		END_IF
+	JazdaLewo:
+		Output.Outputs('TransferLeft',TRUE);
+		Counter := Counter + 1;
+		GAB_FactoryIO_Outputs_Register[0] := (INT_TO_BYTE(Counter));
+		Stany:= WyladowanieLewo;	
+	JazdaPrawo:
+		Output.Outputs('TransferRight',TRUE);
+		Counter := Counter + 1;
+		GAB_FactoryIO_Outputs_Register[0] := (INT_TO_BYTE(Counter));
+		Stany:= WyladowaniePrawo;
+		
+	WyladowanieLewo:
+		IF AtLeftExitTrigger.Q = TRUE THEN
+			Output.Outputs('TransferLeft',FALSE);
+			WysokiLadunek := FALSE;
+			NiskiLadunek:= FALSE;
+			Stany:= StanPoczatkowy;
+		END_IF	
+	WyladowaniePrawo:
+		IF AtRightExitTrigger.Q = TRUE THEN
+			Output.Outputs('TransferRight',FALSE);
+			WysokiLadunek := FALSE;
+			NiskiLadunek:= FALSE;
+			Stany:= StanPoczatkowy;
+		END_IF	
+		
+	StopS:
+		Output.Outputs('TransferRight',FALSE);
+		Output.Outputs('TransferLeft',FALSE);
+		Output.Outputs('Load',FALSE);
+		Output.Outputs('ConveyourEntry',FALSE);
+END_CASE
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="595" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="580" Count="0" />
+      <LineId Id="504" Count="0" />
+      <LineId Id="566" Count="0" />
+      <LineId Id="543" Count="19" />
+      <LineId Id="506" Count="0" />
+      <LineId Id="564" Count="0" />
+      <LineId Id="563" Count="0" />
+      <LineId Id="431" Count="0" />
+      <LineId Id="491" Count="0" />
+      <LineId Id="500" Count="0" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="497" Count="1" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="501" Count="1" />
+      <LineId Id="496" Count="0" />
+      <LineId Id="430" Count="0" />
+      <LineId Id="432" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="415" Count="1" />
+      <LineId Id="419" Count="1" />
+      <LineId Id="418" Count="0" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="313" Count="1" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="400" Count="1" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="403" Count="2" />
+      <LineId Id="421" Count="3" />
+      <LineId Id="426" Count="1" />
+      <LineId Id="425" Count="0" />
+      <LineId Id="428" Count="1" />
+      <LineId Id="590" Count="1" />
+      <LineId Id="459" Count="0" />
+      <LineId Id="444" Count="1" />
+      <LineId Id="460" Count="0" />
+      <LineId Id="588" Count="0" />
+      <LineId Id="586" Count="0" />
+      <LineId Id="443" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="473" Count="1" />
+      <LineId Id="487" Count="1" />
+      <LineId Id="485" Count="0" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="475" Count="2" />
+      <LineId Id="489" Count="1" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="468" Count="2" />
+      <LineId Id="493" Count="0" />
+      <LineId Id="471" Count="0" />
+      <LineId Id="494" Count="1" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="581" Count="0" />
+      <LineId Id="583" Count="1" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="58" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

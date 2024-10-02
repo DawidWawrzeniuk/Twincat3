@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="INPUTS" Id="{6fa7dd1d-798e-465b-bf3a-28635c0a3ecf}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK INPUTS
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	HighSensor : BOOL;
+	LowSensor : BOOL;
+	PalletSensor : BOOL;
+	Loaded : BOOL;
+	AtLeftEntry : BOOL;
+	AtLeftExit : BOOL;
+	AtRightEntry : BOOL;
+	AtRightExit : BOOL;
+	Start : BOOL;
+	Reset : BOOL;
+	Stop:BOOL;
+	EmergencyStop : BOOL;
+	Auto : BOOL;
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//Reading Inputs
+HighSensor := (GAB_FactoryIO_Inputs[0] AND 2#00000001) <> 0;
+LowSensor := (GAB_FactoryIO_Inputs[0] AND 2#00000010) <> 0;
+PalletSensor := (GAB_FactoryIO_Inputs[0] AND 2#00000100) <> 0;
+Loaded := (GAB_FactoryIO_Inputs[0] AND 2#00001000) <> 0;
+AtLeftEntry := (GAB_FactoryIO_Inputs[0] AND 2#00010000) <> 0;
+AtLeftExit := (GAB_FactoryIO_Inputs[0] AND 2#00100000) <> 0;
+AtRightEntry := (GAB_FactoryIO_Inputs[0] AND 2#01000000) <> 0;
+AtRightExit := (GAB_FactoryIO_Inputs[0] AND 2#10000000) <> 0;
+Start := (GAB_FactoryIO_Inputs[1] AND 2#00000001) <> 0;
+Reset := (GAB_FactoryIO_Inputs[1] AND 2#00000010) <> 0;
+Stop := (GAB_FactoryIO_Inputs[1] AND 2#00000100) <> 0;
+EmergencyStop := (GAB_FactoryIO_Inputs[1] AND 2#00001000) <> 0;
+Auto := (GAB_FactoryIO_Inputs[1] AND 2#00010000) <> 0;]]></ST>
+    </Implementation>
+    <LineIds Name="INPUTS">
+      <LineId Id="24" Count="12" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

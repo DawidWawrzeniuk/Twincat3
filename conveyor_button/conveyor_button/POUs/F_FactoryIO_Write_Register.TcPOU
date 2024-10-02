@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="F_FactoryIO_Write_Register" Id="{036a8a9c-8df9-40fe-882e-4a574c9f5814}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM F_FactoryIO_Write_Register
+VAR;
+	LFB_MBReadWriteRegs 	: FB_MBWriteRegs;
+	LX_Busy 				: BOOL;
+	LX_Error 				: BOOL;
+	LD_nErrorId 			: UDINT;
+	
+END_VAR
+ 
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[LFB_MBReadWriteRegs(
+	sIPAddr := '127.0.0.1',
+	nTCPPort := 505,
+	nUnitID := 255,
+	nQuantity := 8,
+	nMBAddr := 0,
+	cbLength := SIZEOF(GAB_FactoryIO_Outputs_Register),
+	pSrcAddr := ADR(GAB_FactoryIO_Outputs_Register),
+	bExecute := TRUE,
+	tTimeout := T#1S,
+	bBusy => LX_Busy,
+	bError => LX_Error,
+	nErrId => LD_nErrorId,
+ );
+LFB_MBReadWriteRegs(bExecute := FALSE);
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="F_FactoryIO_Write_Register">
+      <LineId Id="15" Count="14" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
